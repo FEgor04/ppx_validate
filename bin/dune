@@ -1,0 +1,4 @@
+(executable
+ (public_name ppx_validate)
+ (name main)
+ (libraries ppx_validate))
