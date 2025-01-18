@@ -1,17 +1,27 @@
 open Ppxlib
 module List = ListLabels
 
-let field_validate_impl (ld : label_declaration) type_name =
+let field_validate_impl (ld : label_declaration) record_name =
   let open Ast_builder.Default in
   let loc = ld.pld_loc in
   let validator_func_name =
     ppat_var ~loc
-      { ld.pld_name with txt = "validate_" ^ type_name ^ "_" ^ ld.pld_name.txt }
+      {
+        ld.pld_name with
+        txt = "validate_" ^ record_name ^ "_" ^ ld.pld_name.txt;
+      }
   in
   let func_body =
-    [%expr
-      fun value ->
-        if value = value then Result.ok value else Result.error "error!!!"]
+    match ld.pld_type.ptyp_desc with
+    | Ptyp_constr ({ txt = Longident.Lident "int"; _ }, _) ->
+        [%expr
+          fun value ->
+            if value = value then Result.ok value else Result.error "error!!!"]
+    | Ptyp_constr ({ txt = Longident.Lident "string"; _ }, _) ->
+        [%expr
+          fun value ->
+            if value = value then Result.ok value else Result.error "error!!!"]
+    | _ -> pexp_extension ~loc @@ Location.error_extensionf ~loc "Type is not supported"
   in
   [%stri let [%p validator_func_name] = [%e func_body]]
 
@@ -27,13 +37,15 @@ let fields_return_expressions ~loc (fields : label_declaration list) =
   in
   [%expr Result.ok [%e fields_expr]]
 
-let field_validate_expressions ~loc (fields : label_declaration list) record_name =
+let field_validate_expressions ~loc (fields : label_declaration list)
+    record_name =
   let open Ast_builder.Default in
   List.fold_right fields ~init:(fields_return_expressions ~loc fields)
     ~f:(fun field acc ->
       let field_name = field.pld_name.txt in
       let validate_fn =
-        pexp_ident ~loc (Located.lident ~loc ("validate_" ^ record_name ^ "_"  ^  field_name))
+        pexp_ident ~loc
+          (Located.lident ~loc ("validate_" ^ record_name ^ "_" ^ field_name))
       in
       let field_access =
         pexp_field ~loc
@@ -67,7 +79,9 @@ let generate_impl ~ctxt (_rec_flag, type_declarations) =
                    { td.ptype_name with txt = "validate_" ^ td.ptype_name.txt }
                in
                let validator_impl =
-                 let bindings = field_validate_expressions ~loc fields td.ptype_name.txt in
+                 let bindings =
+                   field_validate_expressions ~loc fields td.ptype_name.txt
+                 in
                  [%expr
                    fun value ->
                      let ( let* ) = Result.bind in
