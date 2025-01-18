@@ -1,6 +1,7 @@
 (library
+ (public_name ppx_validate)
  (name ppx_validate)
- (kind ppx_rewriter)
+ (kind ppx_deriver)
  (libraries ppxlib ppxlib.astlib)
  (preprocess
   (pps ppxlib.metaquot ppx_deriving.show ppx_deriving.ord)))

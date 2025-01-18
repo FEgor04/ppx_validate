@@ -1,4 +1,8 @@
 (executable
  (public_name ppx_validate)
  (name main)
- (libraries ppx_validate))
+ (ocamlopt_flags
+  (:standard -dsource))
+ (libraries ppx_deriving ppx_validate)
+ (preprocess
+  (pps ppx_validate ppx_deriving.show)))
