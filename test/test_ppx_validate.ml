@@ -4,17 +4,21 @@ type t = {
 }
 [@@deriving validate, show]
 
+let error_to_string = function
+  | `Age err -> "age: " ^ err
+  | `FirstName err -> "firstName: " ^ err
+
 let%expect_test "invalid minLength" =
   let value = validate_t { firstName = "abc"; age = 20 } in
-  value |> Result.get_error |> print_endline;
-  [%expect {| value should be at least 4 characters long |}]
+  value |> Result.get_error |> error_to_string |> print_endline;
+  [%expect {| firstName: value should be at least 4 characters long |}]
 
 let%expect_test "invalid maxLength" =
   let value =
     validate_t { firstName = "more than twevle characters"; age = 20 }
   in
-  value |> Result.get_error |> print_endline;
-  [%expect {| value should be at most 12 characters long |}]
+  value |> Result.get_error |> error_to_string |> print_endline;
+  [%expect {| firstName: value should be at most 12 characters long |}]
 
 let%expect_test "valid" =
   let value = validate_t { firstName = "abcde"; age = 20 } in
@@ -23,11 +27,10 @@ let%expect_test "valid" =
 
 let%expect_test "invalid min int" =
   let value = validate_t { firstName = "abcde"; age = 10 } in
-  value |> Result.get_error |> print_endline;
-  [%expect {| value should be at least 18 |}]
+  value |> Result.get_error |> error_to_string |> print_endline;
+  [%expect {| age: value should be at least 18 |}]
 
 let%expect_test "invalid max int" =
   let value = validate_t { firstName = "abcde"; age = 150 } in
-  value |> Result.get_error |> print_endline;
-  [%expect {| value should be at most 120 |}]
-
+  value |> Result.get_error |> error_to_string |> print_endline;
+  [%expect {| age: value should be at most 120 |}]
