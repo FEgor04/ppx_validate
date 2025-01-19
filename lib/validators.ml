@@ -1,37 +1,68 @@
 open Ppxlib
 module List = ListLabels
 
-let validate_min_length ~loc length continuation =
-  let open Ast_builder.Default in
-  let length_constant = Pconst_integer (string_of_int length, None) in
-  let length_expr = pexp_constant ~loc length_constant in
+let validate_field_boolean ~loc continuation check_expr error_expr =
   [%expr
     let ( let* ) = Result.bind in
-    let validate_string_min_length string =
-      if String.length string < [%e length_expr] then
-        Result.error
-        @@ Format.sprintf "value should be at least %d characters long"
-             [%e length_expr]
-      else Result.ok string
+    let validate_field value =
+      if [%e check_expr] then Result.error [%e error_expr]
+      else Result.ok value
     in
-    let* value = validate_string_min_length value in
+    let* value = validate_field value in
     [%e continuation]]
+
+let validate_min_length ~loc length continuation =
+  let open Ast_builder.Default in
+  let length_expr =
+    pexp_constant ~loc @@ Pconst_integer (string_of_int length, None)
+  in
+  let check_expr = [%expr String.length value < [%e length_expr]] in
+  let error_expr =
+    [%expr
+      Format.sprintf "value should be at least %d characters long"
+        [%e length_expr]]
+  in
+  validate_field_boolean ~loc continuation check_expr error_expr
 
 let validate_max_length ~loc length continuation =
   let open Ast_builder.Default in
-  let length_constant = Pconst_integer (string_of_int length, None) in
-  let length_expr = pexp_constant ~loc length_constant in
-  [%expr
-    let ( let* ) = Result.bind in
-    let validate_string_max_length string =
-      if String.length string > [%e length_expr] then
-        Result.error
-        @@ Format.sprintf "value should be at most %d characters long"
-             [%e length_expr]
-      else Result.ok string
-    in
-    let* value = validate_string_max_length value in
-    [%e continuation]]
+  let length_expr =
+    pexp_constant ~loc @@ Pconst_integer (string_of_int length, None)
+  in
+  let check_expr = [%expr String.length value > [%e length_expr]] in
+  let error_expr =
+    [%expr
+      Format.sprintf "value should be at most %d characters long"
+        [%e length_expr]]
+  in
+  validate_field_boolean ~loc continuation check_expr error_expr
+
+let validate_min ~loc length continuation =
+  let open Ast_builder.Default in
+  let length_expr =
+    pexp_constant ~loc @@ Pconst_integer (string_of_int length, None)
+  in
+  let check_expr = [%expr value < [%e length_expr]] in
+  let error_expr =
+    [%expr
+      Format.sprintf "value should be at least %d"
+        [%e length_expr]]
+  in
+  validate_field_boolean ~loc continuation check_expr error_expr
+
+let validate_max ~loc length continuation =
+  let open Ast_builder.Default in
+  let length_expr =
+    pexp_constant ~loc @@ Pconst_integer (string_of_int length, None)
+  in
+  let check_expr = [%expr value > [%e length_expr]] in
+  let error_expr =
+    [%expr
+      Format.sprintf "value should be at most %d"
+        [%e length_expr]]
+  in
+  validate_field_boolean ~loc continuation check_expr error_expr
+
 
 let find_int_attribute name ld =
   let ( let* ) = Option.bind in
@@ -73,42 +104,11 @@ let validate_string_ld_body ld =
   let func = [%expr fun value -> [%e validate_expr]] in
   func
 
-let validate_min ~loc length continuation =
-  let open Ast_builder.Default in
-  let length_constant = Pconst_integer (string_of_int length, None) in
-  let length_expr = pexp_constant ~loc length_constant in
-  [%expr
-    let ( let* ) = Result.bind in
-    let validate_int_min value =
-      if value < [%e length_expr] then
-        Result.error
-        @@ Format.sprintf "value should be at least %d" [%e length_expr]
-      else Result.ok value
-    in
-    let* value = validate_int_min value in
-    [%e continuation]]
 let find_min_attribute = find_int_attribute "min"
-
-let validate_max ~loc length continuation =
-  let open Ast_builder.Default in
-  let length_constant = Pconst_integer (string_of_int length, None) in
-  let length_expr = pexp_constant ~loc length_constant in
-  [%expr
-    let ( let* ) = Result.bind in
-    let validate_int_max value =
-      if value > [%e length_expr] then
-        Result.error
-        @@ Format.sprintf "value should be at most %d" [%e length_expr]
-      else Result.ok value
-    in
-    let* value = validate_int_max value in
-    [%e continuation]]
-
 let find_max_attribute = find_int_attribute "max"
 
-
-
-let int_validators = [ (find_min_attribute, validate_min); (find_max_attribute, validate_max) ]
+let int_validators =
+  [ (find_min_attribute, validate_min); (find_max_attribute, validate_max) ]
 
 let validate_int_ld_body ld =
   let loc = ld.pld_loc in
