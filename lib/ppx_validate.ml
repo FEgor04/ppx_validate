@@ -18,10 +18,22 @@ let field_validate_impl (ld : label_declaration) record_name =
           fun value ->
             if value = value then Result.ok value else Result.error "error!!!"]
     | Ptyp_constr ({ txt = Longident.Lident "string"; _ }, _) ->
-        [%expr
-          fun value ->
-            if value = value then Result.ok value else Result.error "error!!!"]
-    | _ -> pexp_extension ~loc @@ Location.error_extensionf ~loc "Type is not supported"
+        let validate_min_length continuation =
+          [%expr
+            let validate_string_min_length string min_length =
+              if String.length string < min_length then
+                Result.error @@ Format.sprintf "value should be at least %d characters long" min_length
+              else Result.ok string
+            in
+            [%e continuation]]
+        in
+        validate_min_length
+          [%expr
+            fun value ->
+              if value = value then Result.ok value else Result.error "error!!!"]
+    | _ ->
+        pexp_extension ~loc
+        @@ Location.error_extensionf ~loc "Type is not supported"
   in
   [%stri let [%p validator_func_name] = [%e func_body]]
 
