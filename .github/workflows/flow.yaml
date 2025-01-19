@@ -1,0 +1,29 @@
+name: Build, test, lint
+
+on:
+  - push
+  - pull_request
+
+permissions: read-all
+
+jobs:
+  tests:
+    strategy:
+      fail-fast: false
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout tree
+        uses: actions/checkout@v4
+
+      - name: Set-up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.2
+          dune-cache: true
+
+      - run: opam install . --deps-only --with-test
+
+      - run: opam exec -- dune build @fmt
+      - run: opam exec -- dune test
