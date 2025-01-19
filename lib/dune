@@ -3,5 +3,6 @@
  (name ppx_validate)
  (kind ppx_deriver)
  (libraries ppxlib ppxlib.astlib)
+ (modules validators ppx_validate)
  (preprocess
   (pps ppxlib.metaquot ppx_deriving.show ppx_deriving.ord)))
