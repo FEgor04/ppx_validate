@@ -1,6 +1,55 @@
 open Ppxlib
 module List = ListLabels
 
+let validate_min_length ~loc length continuation =
+  let open Ast_builder.Default in
+  let length_constant = Pconst_integer (string_of_int length, None) in
+  let length_expr = pexp_constant ~loc length_constant in
+  [%expr
+    let ( let* ) = Result.bind in
+    let validate_string_min_length string =
+      if String.length string < [%e length_expr] then
+        Result.error
+        @@ Format.sprintf "value should be at least %d characters long"
+             [%e length_expr]
+      else Result.ok string
+    in
+    let* value = validate_string_min_length value in
+    [%e continuation]]
+
+type string_attributes = MinLength of int
+
+let find_min_length_attribute ld =
+  let ( let* ) = Option.bind in
+  let* min_length_attribute =
+    List.find_opt ld.pld_attributes ~f:(fun attribute ->
+        attribute.attr_name.txt = "min_length")
+  in
+  let* value_str =
+    match min_length_attribute.attr_payload with
+    | PStr [%str [%e? exp]] -> (
+        match exp.pexp_desc with
+        | Pexp_constant (Pconst_integer (value, _)) ->
+            Some (int_of_string value)
+        | _ -> None)
+    | _ -> None
+  in
+  Some (MinLength value_str)
+
+let validate_string_ld_body ld =
+  let loc = ld.pld_loc in
+  let min_length_value = find_min_length_attribute ld in
+  let expr =
+    [%expr if value = value then Result.ok value else Result.error "error!!!"]
+  in
+  let body =
+    match min_length_value with
+    | Some (MinLength length) -> validate_min_length ~loc length expr
+    | None -> expr
+  in
+  let func = [%expr fun value -> [%e body]] in
+  func
+
 let field_validate_impl (ld : label_declaration) record_name =
   let open Ast_builder.Default in
   let loc = ld.pld_loc in
@@ -18,19 +67,7 @@ let field_validate_impl (ld : label_declaration) record_name =
           fun value ->
             if value = value then Result.ok value else Result.error "error!!!"]
     | Ptyp_constr ({ txt = Longident.Lident "string"; _ }, _) ->
-        let validate_min_length continuation =
-          [%expr
-            let validate_string_min_length string min_length =
-              if String.length string < min_length then
-                Result.error @@ Format.sprintf "value should be at least %d characters long" min_length
-              else Result.ok string
-            in
-            [%e continuation]]
-        in
-        validate_min_length
-          [%expr
-            fun value ->
-              if value = value then Result.ok value else Result.error "error!!!"]
+        validate_string_ld_body ld
     | _ ->
         pexp_extension ~loc
         @@ Location.error_extensionf ~loc "Type is not supported"
