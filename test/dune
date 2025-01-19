@@ -1,2 +1,6 @@
-(test
- (name test_ppx_validate))
+(library
+ (libraries ppx_validate ppx_deriving ppx_expect)
+ (name test_ppx_validate)
+ (inline_tests)
+ (preprocess
+  (pps ppx_deriving.show ppx_validate ppx_expect)))
