@@ -14,9 +14,7 @@ let field_validate_impl (ld : label_declaration) record_name =
   let func_body =
     match ld.pld_type.ptyp_desc with
     | Ptyp_constr ({ txt = Longident.Lident "int"; _ }, _) ->
-        [%expr
-          fun value ->
-            if value = value then Result.ok value else Result.error "error!!!"]
+        Validators.validate_int_ld_body ld
     | Ptyp_constr ({ txt = Longident.Lident "string"; _ }, _) ->
         Validators.validate_string_ld_body ld
     | _ ->

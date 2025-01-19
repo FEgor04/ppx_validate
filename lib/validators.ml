@@ -72,3 +72,54 @@ let validate_string_ld_body ld =
   in
   let func = [%expr fun value -> [%e validate_expr]] in
   func
+
+let validate_min ~loc length continuation =
+  let open Ast_builder.Default in
+  let length_constant = Pconst_integer (string_of_int length, None) in
+  let length_expr = pexp_constant ~loc length_constant in
+  [%expr
+    let ( let* ) = Result.bind in
+    let validate_int_min value =
+      if value < [%e length_expr] then
+        Result.error
+        @@ Format.sprintf "value should be at least %d" [%e length_expr]
+      else Result.ok value
+    in
+    let* value = validate_int_min value in
+    [%e continuation]]
+let find_min_attribute = find_int_attribute "min"
+
+let validate_max ~loc length continuation =
+  let open Ast_builder.Default in
+  let length_constant = Pconst_integer (string_of_int length, None) in
+  let length_expr = pexp_constant ~loc length_constant in
+  [%expr
+    let ( let* ) = Result.bind in
+    let validate_int_max value =
+      if value > [%e length_expr] then
+        Result.error
+        @@ Format.sprintf "value should be at most %d" [%e length_expr]
+      else Result.ok value
+    in
+    let* value = validate_int_max value in
+    [%e continuation]]
+
+let find_max_attribute = find_int_attribute "max"
+
+
+
+let int_validators = [ (find_min_attribute, validate_min); (find_max_attribute, validate_max) ]
+
+let validate_int_ld_body ld =
+  let loc = ld.pld_loc in
+  let expr = [%expr Result.ok value] in
+  let validate_expr =
+    List.fold_left
+      ~f:(fun acc (find_attribute, validator) ->
+        match find_attribute ld with
+        | None -> acc
+        | Some value -> validator ~loc value acc)
+      ~init:expr int_validators
+  in
+  let func = [%expr fun value -> [%e validate_expr]] in
+  func
