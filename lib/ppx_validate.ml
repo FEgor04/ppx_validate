@@ -17,13 +17,27 @@ let validate_min_length ~loc length continuation =
     let* value = validate_string_min_length value in
     [%e continuation]]
 
-type string_attributes = MinLength of int
+let validate_max_length ~loc length continuation =
+  let open Ast_builder.Default in
+  let length_constant = Pconst_integer (string_of_int length, None) in
+  let length_expr = pexp_constant ~loc length_constant in
+  [%expr
+    let ( let* ) = Result.bind in
+    let validate_string_max_length string =
+      if String.length string > [%e length_expr] then
+        Result.error
+        @@ Format.sprintf "value should be at most %d characters long"
+             [%e length_expr]
+      else Result.ok string
+    in
+    let* value = validate_string_max_length value in
+    [%e continuation]]
 
-let find_min_length_attribute ld =
+let find_int_attribute name ld =
   let ( let* ) = Option.bind in
   let* min_length_attribute =
     List.find_opt ld.pld_attributes ~f:(fun attribute ->
-        attribute.attr_name.txt = "min_length")
+        attribute.attr_name.txt = name)
   in
   let* value_str =
     match min_length_attribute.attr_payload with
@@ -34,20 +48,31 @@ let find_min_length_attribute ld =
         | _ -> None)
     | _ -> None
   in
-  Some (MinLength value_str)
+  Some value_str
+
+let find_min_length_attribute = find_int_attribute "min_length"
+let find_max_length_attribute = find_int_attribute "max_length"
+
+let string_validators =
+  [
+    (find_min_length_attribute, validate_min_length);
+    (find_max_length_attribute, validate_max_length);
+  ]
 
 let validate_string_ld_body ld =
   let loc = ld.pld_loc in
-  let min_length_value = find_min_length_attribute ld in
   let expr =
     [%expr if value = value then Result.ok value else Result.error "error!!!"]
   in
-  let body =
-    match min_length_value with
-    | Some (MinLength length) -> validate_min_length ~loc length expr
-    | None -> expr
+  let validate_expr =
+    List.fold_left
+      ~f:(fun acc (find_attribute, validator) ->
+        match find_attribute ld with
+        | None -> acc
+        | Some value -> validator ~loc value acc)
+      ~init:expr string_validators
   in
-  let func = [%expr fun value -> [%e body]] in
+  let func = [%expr fun value -> [%e validate_expr]] in
   func
 
 let field_validate_impl (ld : label_declaration) record_name =
