@@ -19,7 +19,7 @@
  (name ppx_validate)
  (synopsis "A short synopsis")
  (description "A longer description")
- (depends ocaml ocamlformat ppx_deriving ppxlib)
+ (depends ocaml ocamlformat ppx_deriving ppxlib ppx_expect)
  (tags
   ("add topics" "to describe" your project)))
 

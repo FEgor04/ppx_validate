@@ -15,6 +15,7 @@ depends: [
   "ocamlformat"
   "ppx_deriving"
   "ppxlib"
+  "ppx_expect"
   "odoc" {with-doc}
 ]
 build: [
