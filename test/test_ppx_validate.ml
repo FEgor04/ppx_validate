@@ -1,5 +1,5 @@
 type t = {
-  firstName : string; [@min_length 4] [@max_length 12]
+  firstName : string; [@min_length 4] [@max_length 12] [@lowercase_ascii]
   age : int; [@min 18] [@max 120]
 }
 [@@deriving validate, show]
@@ -21,9 +21,9 @@ let%expect_test "invalid maxLength" =
   [%expect {| firstName: value should be at most 12 characters long |}]
 
 let%expect_test "valid" =
-  let value = validate_t { firstName = "abcde"; age = 20 } in
+  let value = validate_t { firstName = "ABCde!"; age = 20 } in
   value |> Result.get_ok |> show |> print_endline;
-  [%expect {| { Test_ppx_validate.firstName = "abcde"; age = 20 } |}]
+  [%expect {| { Test_ppx_validate.firstName = "abcde!"; age = 20 } |}]
 
 let%expect_test "invalid min int" =
   let value = validate_t { firstName = "abcde"; age = 10 } in
