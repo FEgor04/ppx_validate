@@ -3,6 +3,16 @@ ppx_validate is an OCaml preprocessor library that derives type validation funct
 
 - Федоров Егор Владимирович, P3315
 
+## Supported Validators
+
+- `int`: `[@min X]` checks that value is at least X, `[@max X]` checks that values is at most X 
+- `string`: `[@min_legth X]` checks that value has at least X characters, `[@max_length X]` checks that values has at most X characters, `[@regex REGEX]` checks 
+  that value satisfies given regex
+
+## Supported Transformers
+
+- `string`: `[@lowercase_ascii]` transforms value to lowercase ascii characters
+
 ## How it works
 
 ### Examples
