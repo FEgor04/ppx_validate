@@ -1,5 +1,5 @@
 type t = {
-  firstName : string; [@min_length 4] [@max_length 10]
+  firstName : string; [@min_length 4] [@max_length 10] [@regex {|[a-zA-Z]+|}]
   age : int; [@min 12] [@max 60]
 }
 [@@deriving validate, show]

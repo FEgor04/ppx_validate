@@ -68,6 +68,36 @@ let validate_max ~loc length continuation =
   in
   validate_field_boolean ~loc continuation check_expr error_expr
 
+let validate_regex ~loc length continuation =
+  let open Ast_builder.Default in
+  let regex_expr = pexp_constant ~loc @@ Pconst_string (length, loc, None) in
+  let check_expr =
+    [%expr
+      let compiled_regex = Re.Perl.re [%e regex_expr] |> Re.compile in
+      let result = Re.execp compiled_regex value in
+      not @@ result]
+  in
+  let error_expr =
+    [%expr Format.sprintf "value should satisfy regex %s" [%e regex_expr]]
+  in
+  validate_field_boolean ~loc continuation check_expr error_expr
+
+let find_string_attribute name ld =
+  let ( let* ) = Option.bind in
+  let* attribute =
+    List.find_opt ld.pld_attributes ~f:(fun attribute ->
+        attribute.attr_name.txt = name)
+  in
+  let* value_str =
+    match attribute.attr_payload with
+    | PStr [%str [%e? exp]] -> (
+        match exp.pexp_desc with
+        | Pexp_constant (Pconst_string (value, _loc, _)) -> Some value
+        | _ -> None)
+    | _ -> None
+  in
+  Some value_str
+
 let find_noargs_attribute name ld =
   let find_opt =
     let ( let* ) = Option.bind in
@@ -102,7 +132,7 @@ let find_int_attribute name ld =
 let find_min_length_attribute = find_int_attribute "min_length"
 let find_max_length_attribute = find_int_attribute "max_length"
 
-let string_validators =
+let string_int_validators =
   [
     (find_min_length_attribute, validate_min_length);
     (find_max_length_attribute, validate_max_length);
@@ -110,6 +140,9 @@ let string_validators =
 
 let string_transformers =
   [ (find_noargs_attribute "lowercase_ascii", transform_lowercase_ascii) ]
+
+let string_string_validators =
+  [ (find_string_attribute "regex", validate_regex) ]
 
 let validate_string_ld_body ld =
   let loc = ld.pld_loc in
@@ -121,7 +154,15 @@ let validate_string_ld_body ld =
         match find_attribute ld with
         | None -> acc
         | Some value -> validator ~loc value acc field_name)
-      ~init:expr string_validators
+      ~init:expr string_int_validators
+  in
+  let validate_expr =
+    List.fold_left
+      ~f:(fun acc (find_attribute, validator) ->
+        match find_attribute ld with
+        | None -> acc
+        | Some value -> validator ~loc value acc field_name)
+      ~init:validate_expr string_string_validators
   in
   let validate_expr =
     List.fold_left

@@ -38,8 +38,8 @@ let fields_return_expressions ~loc (fields : label_declaration list) =
 let field_validate_expressions ~loc (fields : label_declaration list)
     record_name =
   let open Ast_builder.Default in
-  List.fold_right fields ~init:(fields_return_expressions ~loc fields)
-    ~f:(fun field acc ->
+  List.fold_right (List.rev fields)
+    ~init:(fields_return_expressions ~loc fields) ~f:(fun field acc ->
       let field_name = field.pld_name.txt in
       let validate_fn =
         pexp_ident ~loc

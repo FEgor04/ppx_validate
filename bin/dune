@@ -3,6 +3,6 @@
  (name main)
  (ocamlopt_flags
   (:standard -dsource))
- (libraries ppx_deriving ppx_validate)
+ (libraries ppx_deriving ppx_validate re)
  (preprocess
   (pps ppx_validate ppx_deriving.show)))

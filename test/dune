@@ -1,5 +1,5 @@
 (library
- (libraries ppx_validate ppx_deriving ppx_expect)
+ (libraries ppx_validate ppx_deriving ppx_expect re)
  (name test_ppx_validate)
  (inline_tests)
  (preprocess

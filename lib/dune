@@ -2,7 +2,7 @@
  (public_name ppx_validate)
  (name ppx_validate)
  (kind ppx_deriver)
- (libraries ppxlib ppxlib.astlib)
+ (libraries ppxlib ppxlib.astlib re)
  (modules validators ppx_validate)
  (preprocess
   (pps ppxlib.metaquot ppx_deriving.show ppx_deriving.ord)))
