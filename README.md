@@ -1,6 +1,8 @@
 # ppx_validate
 ppx_validate is an OCaml preprocessor library that derives type validation functions
 
+- Федоров Егор Владимирович, P3315
+
 ## How it works
 
 ### Examples
@@ -68,7 +70,7 @@ type t = {
            in Result.ok { firstName; age }
 ```
 
-Which allows use to use it like that:
+Which allows to use `validate_t` function like that:
 ```ocaml
 let value_raw = { firstName="John"; age = 10 }
 let value = validate_t value_raw (** Result.err `age "value should be at least 18" *)
